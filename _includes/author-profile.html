@@ -89,18 +89,24 @@
         </li>
       {% endif %}
 
-      {% if author.linkedin %}
+      {% if author.github %}
         <li>
-          <a href="https://www.linkedin.com/in/{{ author.linkedin }}" itemprop="sameAs">
-            <i class="fa fa-fw fa-linkedin-square" aria-hidden="true"></i> LinkedIn
+          <a href="https://github.com/{{ author.github }}" itemprop="sameAs">
+            <i class="fa fa-fw fa-github" aria-hidden="true"></i> GitHub
           </a>
         </li>
       {% endif %}
 
-      {% if author.xing %}
+      <li>
+      <a href="https://orcid.org/0000-0002-1434-7166">
+          <i class="fa fa-fw fa-id-card" aria-hidden="true"></i> ORCID
+        </a>
+      </li>
+
+      {% if author.linkedin %}
         <li>
-          <a href="https://www.xing.com/profile/{{ author.xing }}" itemprop="sameAs">
-            <i class="fa fa-fw fa-xing-square" aria-hidden="true"></i> XING
+          <a href="https://www.linkedin.com/in/{{ author.linkedin }}" itemprop="sameAs">
+            <i class="fa fa-fw fa-linkedin-square" aria-hidden="true"></i> LinkedIn
           </a>
         </li>
       {% endif %}
@@ -112,6 +118,15 @@
           </a>
         </li>
       {% endif %}
+<!-- https://orcid.org/0000-0002-1434-7166 -->
+      {% if author.xing %}
+        <li>
+          <a href="https://www.xing.com/profile/{{ author.xing }}" itemprop="sameAs">
+            <i class="fa fa-fw fa-xing-square" aria-hidden="true"></i> XING
+          </a>
+        </li>
+      {% endif %}
+
 
       {% if author.tumblr %}
         <li>
@@ -129,13 +144,6 @@
         </li>
       {% endif %}
 
-      {% if author.github %}
-        <li>
-          <a href="https://github.com/{{ author.github }}" itemprop="sameAs">
-            <i class="fa fa-fw fa-github" aria-hidden="true"></i> GitHub
-          </a>
-        </li>
-      {% endif %}
 
       {% if author.gitlab %}
         <li>
