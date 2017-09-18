@@ -1,8 +1,6 @@
 ---
 permalink: /work/
-title: "KM - Work"
+title: "Work"
 layout: single
 author_profile: true
 ---
-
-test
