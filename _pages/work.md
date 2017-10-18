@@ -13,6 +13,6 @@ In my day-to-day work, I utilize both C++ and Python, and I'm well acquainted wi
 
 During my spare time, I work on various machine learning/data analysis tasks. I have participated in 7 Kaggle competitions, and have experience with different machine learning tools: Pandas, Scikit-learn, XGBoost, Catboost, Keras, Nolearn. I also have some basic knowledge of Spark (which I have not applied to any real-life problems yet, though).
 
-My other code-related hobby is audio processing. I have experience with MAX/MSP and have implemented some sound-processing algorithms (such as a reverb) in it; I also have written a C++ DSP library based on the Armadillo linear algebra library, which implements a basic set of FIR and IIR filters, as well as STFT and other heplful algorithms. I'm currently working on an machine learning-based audio generation code.
+My other code-related hobby is audio processing. I have experience with MAX/MSP and have implemented some sound-processing algorithms (such as a reverb) in it; I also have written a C++ DSP library based on the Armadillo linear algebra library, which implements a basic set of FIR and IIR filters, as well as STFT and other heplful algorithms. I'm currently working on a machine learning-based raw audio generation code.
 
 In 2013-2014 I've also worked as a freelance web designer and have created various online Javascript games, and gained some Django and related framework experience, as well as some knowledge of CSS and HTML.
