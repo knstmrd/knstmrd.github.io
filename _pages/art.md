@@ -13,7 +13,7 @@ I am a multi-instrumentalist musician and have a few solo projects and artistic 
 
 * [The Exotic Sphere](http://theexoticsphere.bandcamp.com/) is my instrumental project with no fixed genre and is an outlet for various musical experimentation, such as algorithmic composition, musique concrete, sound design and so on
 
-* [VUG](http://vuggg.bandcamp.com/) was a short-lived noise rock band in which I played guitar; the only "studio" output of this band is [https://vuggg.bandcamp.com/album/the-infinite-vug](a remix of rehearsal sessions) that I made; we have some live videos on [YouTube](https://www.youtube.com/playlist?list=PLsG_rsowsYyEuRsnF3wvrqjvtlSpbCv56)
+* [VUG](http://vuggg.bandcamp.com/) was a short-lived noise rock band in which I played guitar; the only "studio" output of this band is [a remix of rehearsal sessions](https://vuggg.bandcamp.com/album/the-infinite-vug) that I made; we have some live videos on [YouTube](https://www.youtube.com/playlist?list=PLsG_rsowsYyEuRsnF3wvrqjvtlSpbCv56)
 
 * [Jomar Kepenko](https://jomarkepenko.bandcamp.com/) was a collaboration with a fine English fellow Aimmar Cair done over the Internet; mostly noisy electronica
 
