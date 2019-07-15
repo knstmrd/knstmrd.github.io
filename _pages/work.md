@@ -7,7 +7,7 @@ author_profile: true
 
 I'm a Ph.D. specializing in non-equilibrium rarefied gas dynamics. I received my Bachelors and Masters degrees at the same department in 2013 and 2015, respectively (scientific supervisor - prof. Kustova E.V.). I defended my PhD thesis in April 2017 (scientific supervisor - prof. Kustova E.V.). My thesis is devoted to the study of non-equilibrium physico-chemical process rates in rarefied gas flows and the investigation of the role of cross-coupling between these processes.
 
-Since July 2018 I've been working as a remote scientific consultant for the University of Texas at Austin, developing new methods for modeling rarefied gas flows.
+Since July 2018 I've been working at the University of Texas at Austin, developing new methods for modeling rarefied gas flows.
 
 From 2013 to the end of 2017 I was employed as an assistant researcher and research engineer at the Department of Hydroaeromechanics of the Saint-Petersburg State University, where I've worked on implementation of various kinetic theory algorithms in code.
 
