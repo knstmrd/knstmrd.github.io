@@ -7,7 +7,9 @@ author_profile: true
 
 I'm a Ph.D. specializing in non-equilibrium rarefied gas dynamics. I received my Bachelors and Masters degrees at the same department in 2013 and 2015, respectively (scientific supervisor - prof. Kustova E.V.). I defended my PhD thesis in April 2017 (scientific supervisor - prof. Kustova E.V.). My thesis is devoted to the study of non-equilibrium physico-chemical process rates in rarefied gas flows and the investigation of the role of cross-coupling between these processes.
 
-Since November 2021 I've been working at the German Aerospace Center (DLR) in Göttingen on a project sponsored by the Alexander von Humboldt foundation. The research project is concerned with uncertainty quantification of non-equilibrium expanding flows. I am also involved in work on moment method closures for reacting gas flows, photon Monte Carlo radiation modelling, and particle-in-cell DSMC methods for rarefied plasma simulations.
+Since November 2023 I've been working at the RWTH Aachen University in the group for Applied and Computational Mathematics (ACOM).
+
+From November 2021 till November 2023 I've worked at the German Aerospace Center (DLR) in Göttingen on a project sponsored by the Alexander von Humboldt foundation. The research project is concerned with uncertainty quantification of non-equilibrium expanding flows. I am also involved in work on moment method closures for reacting gas flows, photon Monte Carlo radiation modelling, and particle-in-cell DSMC methods for rarefied plasma simulations.
 
 From July 2018 to June 2021 I worked at the University of Texas at Austin, developing new methods for modelling rarefied gas flows. These include hybridizing discrete velocity and DSMC methods; developing variable-weight DSMC schemes, and improving modelling of tail-driven processes.
 
