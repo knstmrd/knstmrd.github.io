@@ -80,7 +80,7 @@ author:
   name             : "Georgii Oblapenko"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
   bio              : "Ph.D., non-equilibrium rarefied gas dynamics specialist"
-  location         : "Göttingen, Germany"
+  location         : "Aachen, Germany"
   email            : "georgii.oblapenko@fastmail.com"
   uri              :
   bitbucket        :
@@ -97,11 +97,11 @@ author:
   lastfm           :
   linkedin         : "george-oblapenko" # "john-doe-12345678" (the last part of your profile url, e.g. https://www.linkedin.com/in/john-doe-12345678)
   pinterest        :
-  soundcloud       :
+  soundcloud       : "kunstmord"
   stackoverflow    : # "123456/username" (the last part of your profile url, e.g. http://stackoverflow.com/users/123456/username)
   steam            : # "steamId" (the last part of your profile url, e.g. https://steamcommunity.com/id/steamId/)
   tumblr           :
-  twitter          : "kunstmord1"
+  twitter          : 
   vine             :
   weibo            :
   xing             :
