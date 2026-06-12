@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>K/M</title>
+    <title>Three.js 1D PIC Simulation with Phase-Space Heatmap</title>
     <style>
         body { margin: 0; overflow: hidden; background: #050505; }
         canvas { width: 100vw; height: 100vh; }
@@ -23,12 +23,13 @@ import * as THREE from 'three';
 import { GPUComputationRenderer } from 'three/addons/misc/GPUComputationRenderer.js';
 
 // --- Simulation Parameters ---
-const NX = 80;             // Cells
-const NPPC = 200;          // Particles Per Cell
+const NX = 128;             // Cells
+const NPPC = 128;          // Particles Per Cell
 const TOTAL_P = NX * NPPC; // Total Particles
 const TEX_SIZE = Math.ceil(Math.sqrt(TOTAL_P)); // Texture dimensions (80x80)
 
 const DX = 1.0 / NX;
+const ALPHA = 0.975;        // NEW: Hist running average factor (closer to 1.0 = longer memory)
 
 // --- 1. Setup Main Renderer ---
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -36,48 +37,37 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+renderer.getContext().getExtension('EXT_float_blend');
+
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(); 
 
-// ==========================================
-// NEW: GRID COMPUTE SETUP (NX x 1)
-// ==========================================
+// --- 2. GRID COMPUTE SETUP (NX x 1) ---
 const gpuGrid = new GPUComputationRenderer(NX, 1, renderer);
-
 const dtPotential = gpuGrid.createTexture();
 const dtEField = gpuGrid.createTexture();
 
-// Jacobi Iteration Shader (Solves Poisson)
 const jacobiShader = `
     uniform sampler2D u_rho;
     uniform float u_dx;
     void main() {
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         float rho = texture2D(u_rho, uv).r;
-        
-        // Fetch neighbors with periodic wrap-around using fract()
         float dx = 1.0 / resolution.x;
         float phi_left = texture2D(texturePotential, fract(uv - vec2(dx, 0.0))).r;
         float phi_right = texture2D(texturePotential, fract(uv + vec2(dx, 0.0))).r;
-        
-        // Jacobi Update: phi = (phi_left + phi_right + rho * dx^2) / 2
         float phi_new = (phi_left + phi_right + rho * u_dx * u_dx) * 0.5;
-        
         gl_FragColor = vec4(phi_new, 0.0, 0.0, 1.0);
     }
 `;
 
-// E-Field Shader (E = -grad(phi))
 const efieldShader = `
     uniform float u_dx;
     void main() {
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         float dx = 1.0 / resolution.x;
-        
         float phi_left = texture2D(texturePotential, fract(uv - vec2(dx, 0.0))).r;
         float phi_right = texture2D(texturePotential, fract(uv + vec2(dx, 0.0))).r;
-        
-        // Central difference
         float E = -(phi_right - phi_left) / (2.0 * u_dx);
         gl_FragColor = vec4(E, 0.0, 0.0, 1.0);
     }
@@ -85,26 +75,20 @@ const efieldShader = `
 
 const potentialVar = gpuGrid.addVariable("texturePotential", jacobiShader, dtPotential);
 const efieldVar = gpuGrid.addVariable("textureEField", efieldShader, dtEField);
-
-// Both depend on potential to update iteratively
 gpuGrid.setVariableDependencies(potentialVar, [potentialVar]);
 gpuGrid.setVariableDependencies(efieldVar, [potentialVar]);
-
 potentialVar.material.uniforms.u_rho = { value: null };
 potentialVar.material.uniforms.u_dx = { value: DX };
 efieldVar.material.uniforms.u_dx = { value: DX };
-
 gpuGrid.init();
 
-// ==========================================
-// 2. PARTICLE COMPUTE SETUP (80 x 80)
-// ==========================================
+// --- 3. PARTICLE COMPUTE SETUP (80 x 80) ---
 const gpuParticles = new GPUComputationRenderer(TEX_SIZE, TEX_SIZE, renderer);
 const dtState = gpuParticles.createTexture();
 const data = dtState.image.data;
 
 for (let i = 0; i < data.length; i += 4) {
-    data[i] = Math.random() - 3.9; // X Position (Uniform)
+    data[i] = Math.random() - 3.7; // X Position (Uniform)
 
     data[i + 2] = 2 * (Math.random() - 0.5);
 
@@ -121,41 +105,29 @@ const particleShader = `
     #define MAX_V_T 0.2
     uniform float u_dt;
     uniform sampler2D u_field; 
-    
     void main() {
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         vec4 state = texture2D(textureParticle, uv);
         float x = state.r;
         float v = state.g;
-
-        // Fetch E-field from grid (Nearest grid point)
         float E = texture2D(u_field, vec2(x, 0.5)).r;
-
-        // Push
         v += E * u_dt;
         v = clamp(v, MAX_V_B, MAX_V_T);
         x = fract(x + v * u_dt);
-
         gl_FragColor = vec4(x, v, 0.0, 1.0);
     }
 `;
 
 const particleVar = gpuParticles.addVariable("textureParticle", particleShader, dtState);
 gpuParticles.setVariableDependencies(particleVar, [particleVar]);
-particleVar.material.uniforms.u_dt = { value: 0.01 };
+particleVar.material.uniforms.u_dt = { value: 0.0075 };
 particleVar.material.uniforms.u_field = { value: null };
-
 gpuParticles.init();
 
-// ==========================================
-// NEW: CHARGE DEPOSITION SETUP (Scatter)
-// ==========================================
-// We draw particles as points onto this 64x1 texture to sum their charge
+// --- 4. CHARGE DEPOSITION SETUP ---
 const rhoTarget = new THREE.WebGLRenderTarget(NX, 1, {
-    format: THREE.RedFormat,
-    type: THREE.HalfFloatType,
-    minFilter: THREE.NearestFilter,
-    magFilter: THREE.NearestFilter
+    format: THREE.RedFormat, type: THREE.HalfFloatType,
+    minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter
 });
 const rhoScene = new THREE.Scene();
 const rhoCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -170,37 +142,104 @@ geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TOT
 geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
 const rhoMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-        u_stateTex: { value: null },
-        u_charge: { value: -1.0 / NPPC } // Electrons are negative
-    },
+    uniforms: { u_stateTex: { value: null }, u_charge: { value: -1.0 / NPPC } },
     vertexShader: `
         uniform sampler2D u_stateTex;
         void main() {
             float x = texture2D(u_stateTex, uv).r;
-            // Map [0, 1] to WebGL clip space [-1, 1]
             gl_Position = vec4(x * 2.0 - 1.0, 0.0, 0.0, 1.0);
             gl_PointSize = 1.0; 
         }
     `,
     fragmentShader: `
         uniform float u_charge;
-        void main() {
-            gl_FragColor = vec4(u_charge, 0.0, 0.0, 1.0);
-        }
+        void main() { gl_FragColor = vec4(u_charge, 0.0, 0.0, 1.0); }
     `,
-    blending: THREE.AdditiveBlending,
-    depthTest: false,
-    transparent: true
+    blending: THREE.AdditiveBlending, depthTest: false, transparent: true
 });
 const rhoPoints = new THREE.Points(geometry, rhoMaterial);
 rhoPoints.frustumCulled = false;
 rhoScene.add(rhoPoints);
 
+// ==========================================
+// NEW: PHASE SPACE HISTOGRAM CONFIG (NX x NX)
+// ==========================================
+// A. Target to catch the raw particle footprint drops for this frame
+const currentHistTarget = new THREE.WebGLRenderTarget(NX, NX, {
+    format: THREE.RedFormat, type: THREE.HalfFloatType,
+    minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter
+});
+const histScene = new THREE.Scene();
+const histCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
-// ==========================================
-// 4. MAIN VISUALS SETUP
-// ==========================================
+const histMaterial = new THREE.ShaderMaterial({
+    uniforms: { u_stateTex: { value: null } },
+    vertexShader: `
+        uniform sampler2D u_stateTex;
+        void main() {
+            vec4 data = texture2D(u_stateTex, uv);
+            float x = data.r * 2.0 - 1.0;
+            float v = data.g * 5.0; // Scaled identically to visual particle coordinates
+            gl_Position = vec4(x, v, 0.0, 1.0);
+            gl_PointSize = 0.5;
+        }
+    `,
+    fragmentShader: `
+        void main() { gl_FragColor = vec4(0.0008, 0.0, 0.0, 0.75); } // Small drop per particle
+    `,
+    blending: THREE.AdditiveBlending, depthTest: false, transparent: true
+});
+const histPoints = new THREE.Points(geometry, histMaterial);
+histPoints.frustumCulled = false;
+histScene.add(histPoints);
+
+// B. Compute pipeline for managing the historical mix
+const gpuHist = new GPUComputationRenderer(NX, NX, renderer);
+const dtHistAvg = gpuHist.createTexture(); // Defaults to clean slate zeros
+
+const histAvgShader = `
+    uniform sampler2D u_currentHist;
+    uniform float u_alpha;
+    void main() {
+        vec2 uv = gl_FragCoord.xy / resolution.xy;
+        float prev = texture2D(textureHistAvg, uv).r;
+        float current = texture2D(u_currentHist, uv).r;
+        
+        // Running average assignment
+        float avg = (prev * u_alpha) + (current * (1.0 - u_alpha));
+        gl_FragColor = vec4(avg, 0.0, 0.0, 1.0);
+    }
+`;
+const histAvgVar = gpuHist.addVariable("textureHistAvg", histAvgShader, dtHistAvg);
+gpuHist.setVariableDependencies(histAvgVar, [histAvgVar]);
+histAvgVar.material.uniforms.u_currentHist = { value: null };
+histAvgVar.material.uniforms.u_alpha = { value: ALPHA };
+gpuHist.init();
+
+// C. The Visual Quad serving as our background heatmap element
+const bgMaterial = new THREE.ShaderMaterial({
+    uniforms: { u_histTex: { value: null } },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+        varying vec2 vUv;
+        uniform sampler2D u_histTex;
+        void main() {
+            float val = texture2D(u_histTex, vUv).r * 15.0; // Intensity boost factor
+            // Color map logic: Dark Indigo -> Crimson Crimson -> Bright Gold Heat
+            vec3 color = vec3(val * 0.75 + val * val * 0.2, val * 0.75 + val * val * 0.3, val * 0.75  + val * val * 0.1);
+            gl_FragColor = vec4(color, 0.5);
+        }
+    `,
+    depthTest: false
+});
+const bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMaterial);
+bgMesh.renderOrder = -1; // Explicit rule telling Three.js to paint this BEFORE particles
+scene.add(bgMesh);
+
+// --- 5. MAIN VISUALS SETUP ---
 const visualMaterial = new THREE.ShaderMaterial({
     uniforms: { u_stateTex: { value: null } },
     vertexShader: `
@@ -210,21 +249,20 @@ const visualMaterial = new THREE.ShaderMaterial({
             float x = data.r * 2.0 - 1.0; 
             float v = data.g * 5.0;       
             gl_Position = vec4(x, v, 0.0, 1.0);
-            gl_PointSize = 2.0;
+            gl_PointSize = 3.5;
         }
     `,
     fragmentShader: `
-        void main() { gl_FragColor = vec4(0.0, 0.8, 1.0, 1.0); }
-    `
+        void main() { gl_FragColor = vec4(0.0, 0.9, 1.0, 0.8); }
+    `,
+    transparent: true, blending: THREE.AdditiveBlending
 });
 const visualPoints = new THREE.Points(geometry, visualMaterial);
 visualPoints.frustumCulled = false;
+visualPoints.renderOrder = 0;
 scene.add(visualPoints);
 
-
-// ==========================================
-// 5. ANIMATION LOOP
-// ==========================================
+// --- 6. ANIMATION LOOP ---
 function animate() {
     requestAnimationFrame(animate);
 
@@ -233,42 +271,53 @@ function animate() {
     // --- A. DEPOSIT CHARGE ---
     rhoMaterial.uniforms.u_stateTex.value = currentState;
     renderer.setRenderTarget(rhoTarget);
-    // Fill background with +1.0 (Positive Ion Background)
     renderer.setClearColor(new THREE.Color(1.0, 0, 0)); 
     renderer.clear();
     renderer.render(rhoScene, rhoCamera);
 
     // --- B. SOLVE GRID (Poisson & E-Field) ---
     potentialVar.material.uniforms.u_rho.value = rhoTarget.texture;
-    // Run Jacobi 20 times to converge
-    for(let i=0; i<20; i++) {
-        gpuGrid.compute();
-    }
+    for(let i=0; i<25; i++) { gpuGrid.compute(); }
     const currentEField = gpuGrid.getCurrentRenderTarget(efieldVar).texture;
 
-    // --- C. PUSH PARTICLES ---
+    // --- NEW: C. COMPUTE RUNNING PHASE-SPACE HISTOGRAM ---
+    // 1. Snapshot the raw footprints this frame
+    histMaterial.uniforms.u_stateTex.value = currentState;
+    renderer.setRenderTarget(currentHistTarget);
+    renderer.setClearColor(0x000000);
+    renderer.clear();
+    renderer.render(histScene, histCamera);
+
+    // 2. Compute Exponential Moving Average
+    histAvgVar.material.uniforms.u_currentHist.value = currentHistTarget.texture;
+    gpuHist.compute();
+    const currentHistAvgTex = gpuHist.getCurrentRenderTarget(histAvgVar).texture;
+    
+    // 3. Assign to background material
+    bgMaterial.uniforms.u_histTex.value = currentHistAvgTex;
+
+    // --- D. PUSH PARTICLES ---
     particleVar.material.uniforms.u_field.value = currentEField;
     gpuParticles.compute();
 
-    // --- D. RENDER TO SCREEN ---
-    renderer.setRenderTarget(null); // Back to screen
+    // --- E. RENDER SCENE TO VIEWPORT ---
+    renderer.setRenderTarget(null); 
     visualMaterial.uniforms.u_stateTex.value = currentState;
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-
-    const topHeight = h * 0.05;    // Top 5%
-    const bottomHeight = h * 0.95; // Bottom 95%
+    const topHeight = h * 0.05;    
+    const bottomHeight = h * 0.95; 
 
     renderer.setScissorTest(true);
 
-    // Top: Empty
+    // Top 5%: Empty
     renderer.setViewport(0, bottomHeight, w, topHeight);
     renderer.setScissor(0, bottomHeight, w, topHeight);
     renderer.setClearColor(0x050505);
     renderer.clear();
 
-    // Bottom: Simulation
+    // Bottom 95%: Phase Space Simulation Canvas
     renderer.setViewport(0, 0, w, bottomHeight);
     renderer.setScissor(0, 0, w, bottomHeight);
     renderer.render(scene, camera);
