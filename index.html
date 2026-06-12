@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Three.js 1D PIC Simulation</title>
+    <title>K/M</title>
     <style>
         body { margin: 0; overflow: hidden; background: #050505; }
         canvas { width: 100vw; height: 100vh; }
@@ -23,8 +23,8 @@ import * as THREE from 'three';
 import { GPUComputationRenderer } from 'three/addons/misc/GPUComputationRenderer.js';
 
 // --- Simulation Parameters ---
-const NX = 64;             // Cells
-const NPPC = 1000;          // Particles Per Cell
+const NX = 80;             // Cells
+const NPPC = 200;          // Particles Per Cell
 const TOTAL_P = NX * NPPC; // Total Particles
 const TEX_SIZE = Math.ceil(Math.sqrt(TOTAL_P)); // Texture dimensions (80x80)
 
@@ -104,14 +104,21 @@ const dtState = gpuParticles.createTexture();
 const data = dtState.image.data;
 
 for (let i = 0; i < data.length; i += 4) {
-    data[i] = Math.random(); // X Position (Uniform)
-    data[i + 1] = (Math.sin(data[i] * Math.PI * 2)) * 0.06 + 0.05 * (Math.random() - 0.5) + (Math.random() * data[i] * data[i]) * 0.5 * (Math.random() - 1.0) + (Math.cos(data[i] * Math.PI * 2)) * 0.04; // V Perturbation
+    data[i] = Math.random() - 3.9; // X Position (Uniform)
+
+    data[i + 2] = 2 * (Math.random() - 0.5);
+
+    data[i + 1] = data[i + 2] * (Math.sin(data[i] * Math.PI * 2)) * 0.06
+                + 0.05 * (Math.random() - 0.5)
+                + (Math.random() * data[i] * data[i]) * 0.5 * (Math.random() - 1.0)
+                + (1.0 - data[i + 2]) * (Math.cos(data[i] * Math.PI * 2)) * 0.06; // V Perturbation
     data[i + 2] = 0;
     data[i + 3] = 1;
 }
 
 const particleShader = `
-    #define MAX_V 0.2
+    #define MAX_V_B -0.199
+    #define MAX_V_T 0.2
     uniform float u_dt;
     uniform sampler2D u_field; 
     
@@ -126,7 +133,7 @@ const particleShader = `
 
         // Push
         v += E * u_dt;
-        v = clamp(v, -MAX_V, MAX_V);
+        v = clamp(v, MAX_V_B, MAX_V_T);
         x = fract(x + v * u_dt);
 
         gl_FragColor = vec4(x, v, 0.0, 1.0);
