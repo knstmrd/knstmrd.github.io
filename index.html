@@ -3,11 +3,167 @@
 <head>
     <title>Three.js 1D PIC Simulation with Phase-Space Heatmap</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050505; }
-        canvas { width: 100vw; height: 100vh; }
+        :root {
+            --term-fg: #33ff33;
+            --term-bg: #050505;
+        }
+        html, body { height: 100%; }
+        body {
+            margin: 0; overflow: hidden; background: var(--term-bg);
+            display: flex;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        /* --- Terminal frame --- */
+        #terminal {
+            flex: 1;
+            margin: 14px;
+            border: 2px solid var(--term-fg);
+            display: flex; flex-direction: column;
+            min-width: 0; min-height: 0;
+        }
+
+        /* --- Menu bar: horizontal lines with a break for the menu --- */
+        #titlebar {
+            display: flex; align-items: stretch;
+            height: 26px;
+            padding: 5px 10px;
+            border-bottom: 2px solid var(--term-fg);
+            flex: none;
+        }
+        #titlebar .lines {
+            flex: 1;
+            background: repeating-linear-gradient(
+                to bottom,
+                var(--term-fg) 0px, var(--term-fg) 2px,
+                transparent 2px, transparent 6px
+            );
+            background-size: 100% 26px;
+        }
+        #menu {
+            display: flex; align-items: center;
+            gap: 28px; padding: 0 22px;
+        }
+        #menu a {
+            color: var(--term-fg);
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 2px;
+            text-decoration: none;
+            cursor: pointer;
+            user-select: none;
+            padding: 1px 6px;
+        }
+        #menu a:hover {
+            background: var(--term-fg);
+            color: var(--term-bg);
+        }
+
+        /* --- Canvas area --- */
+        #screen { flex: 1; min-height: 0; position: relative; }
+        #screen canvas { display: block; width: 100%; height: 100%; }
+
+        /* --- Windows 95 style popups --- */
+        .popup {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(480px, 85vw);
+            background: #c0c0c0; color: #000;
+            border: 2px solid;
+            border-color: #ffffff #404040 #404040 #ffffff;
+            box-shadow: 1px 1px 0 1px #000000, 10px 10px 0 rgba(0, 0, 0, 0.45);
+            font-family: Tahoma, "MS Sans Serif", Geneva, sans-serif;
+            font-size: 13px;
+            display: none;
+            z-index: 10;
+        }
+        .popup.open { display: block; }
+        .popup-title {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 2px;
+            padding: 3px 4px 3px 8px;
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: #fff; font-weight: bold;
+        }
+        .popup-close {
+            width: 18px; height: 16px;
+            background: #c0c0c0; color: #000;
+            border: 1px solid;
+            border-color: #ffffff #404040 #404040 #ffffff;
+            box-shadow: inset -1px -1px 0 #808080;
+            font: bold 11px/14px Tahoma, sans-serif;
+            text-align: center;
+            cursor: pointer;
+        }
+        .popup-close:active {
+            border-color: #404040 #ffffff #ffffff #404040;
+            box-shadow: inset 1px 1px 0 #808080;
+        }
+        .popup-body { padding: 14px 16px 18px; line-height: 1.5; }
+        .popup-body p { margin: 0 0 10px; }
     </style>
 </head>
 <body>
+
+<div id="terminal">
+    <div id="titlebar">
+        <div class="lines"></div>
+        <nav id="menu">
+            <a id="workLink">Work</a>
+            <a id="artLink">Art</a>
+        </nav>
+        <div class="lines"></div>
+    </div>
+    <div id="screen"></div>
+</div>
+
+<div class="popup" id="workPopup">
+    <div class="popup-title">
+        <span>Work</span>
+        <div class="popup-close" data-close="workPopup">x</div>
+    </div>
+    <div class="popup-body">
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+        eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+        minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
+        ex ea commodo consequat.</p>
+        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse
+        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+        cupidatat non proident, sunt in culpa qui officia deserunt mollit anim
+        id est laborum.</p>
+    </div>
+</div>
+
+<div class="popup" id="artPopup">
+    <div class="popup-title">
+        <span>Art</span>
+        <div class="popup-close" data-close="artPopup">x</div>
+    </div>
+    <div class="popup-body">
+        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+        accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae
+        ab illo inventore veritatis et quasi architecto beatae vitae dicta
+        sunt explicabo.</p>
+        <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit
+        aut fugit, sed quia consequuntur magni dolores eos qui ratione
+        voluptatem sequi nesciunt.</p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('workLink').addEventListener('click', () => {
+        document.getElementById('workPopup').classList.add('open');
+    });
+    document.getElementById('artLink').addEventListener('click', () => {
+        document.getElementById('artPopup').classList.add('open');
+    });
+    document.querySelectorAll('.popup-close').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById(btn.dataset.close).classList.remove('open');
+        });
+    });
+</script>
 
 <script type="importmap">
 {
@@ -32,10 +188,11 @@ const DX = 1.0 / NX;
 const ALPHA = 0.975;        // NEW: Hist running average factor (closer to 1.0 = longer memory)
 
 // --- 1. Setup Main Renderer ---
+const screenEl = document.getElementById('screen');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+renderer.setSize(screenEl.clientWidth, screenEl.clientHeight);
+screenEl.appendChild(renderer.domElement);
 
 renderer.getContext().getExtension('EXT_float_blend');
 
@@ -304,8 +461,8 @@ function animate() {
     renderer.setRenderTarget(null); 
     visualMaterial.uniforms.u_stateTex.value = currentState;
 
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = screenEl.clientWidth;
+    const h = screenEl.clientHeight;
     const topHeight = h * 0.05;    
     const bottomHeight = h * 0.95; 
 
@@ -326,7 +483,7 @@ function animate() {
 animate();
 
 window.addEventListener('resize', () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(screenEl.clientWidth, screenEl.clientHeight);
 });
 </script>
 </body>
