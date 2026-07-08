@@ -6,6 +6,7 @@
         :root {
             --term-fg: #33ff33;
             --term-bg: #050505;
+            --term-glow: rgba(51, 255, 51, 0.55);
         }
         html, body { height: 100%; }
         body {
@@ -15,12 +16,28 @@
         }
 
         /* --- Terminal frame --- */
+        /* The visible frame lives on a masked ::before overlay so the side
+           lines (and their glow) can fade out toward the bottom. */
         #terminal {
             flex: 1;
             margin: 14px;
-            border: 2px solid var(--term-fg);
+            border: 2px solid transparent; /* keeps layout; visuals on ::before */
+            position: relative;
             display: flex; flex-direction: column;
             min-width: 0; min-height: 0;
+        }
+        #terminal::before {
+            content: "";
+            position: absolute; inset: -2px;
+            border: 2px solid var(--term-fg);
+            border-bottom: none;
+            box-shadow:
+                0 0 10px var(--term-glow),
+                inset 0 0 10px var(--term-glow);
+            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 98%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 98%);
+            pointer-events: none;
+            z-index: 2;
         }
 
         /* --- Menu bar: horizontal lines with a break for the menu --- */
@@ -29,6 +46,10 @@
             height: 26px;
             padding: 5px 10px;
             border-bottom: 2px solid var(--term-fg);
+            box-shadow:
+                0 6px 10px -6px var(--term-glow),
+                inset 0 -6px 10px -6px var(--term-glow);
+            position: relative; z-index: 1;
             flex: none;
         }
         #titlebar .lines {
@@ -63,42 +84,43 @@
         #screen { flex: 1; min-height: 0; position: relative; }
         #screen canvas { display: block; width: 100%; height: 100%; }
 
-        /* --- Windows 95 style popups --- */
+        /* --- Popups --- */
         .popup {
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: min(480px, 85vw);
-            background: #c0c0c0; color: #000;
-            border: 2px solid;
-            border-color: #ffffff #404040 #404040 #ffffff;
-            box-shadow: 1px 1px 0 1px #000000, 10px 10px 0 rgba(0, 0, 0, 0.45);
-            font-family: Tahoma, "MS Sans Serif", Geneva, sans-serif;
-            font-size: 13px;
+            background: rgba(0, 0, 0, 0.75);
+            color: var(--term-fg);
+            border: 2px solid var(--term-fg);
+            box-shadow:
+                0 0 10px var(--term-glow),
+                inset 0 0 10px var(--term-glow);
+            font-family: "Courier New", Courier, monospace;
+            font-size: 16px;
             display: none;
             z-index: 10;
         }
         .popup.open { display: block; }
         .popup-title {
             display: flex; justify-content: space-between; align-items: center;
-            margin: 2px;
-            padding: 3px 4px 3px 8px;
-            background: linear-gradient(90deg, #000080, #1084d0);
-            color: #fff; font-weight: bold;
+            padding: 4px 6px 4px 10px;
+            border-bottom: 2px solid var(--term-fg);
+            font-weight: bold;
+            letter-spacing: 2px;
         }
         .popup-close {
-            width: 18px; height: 16px;
-            background: #c0c0c0; color: #000;
-            border: 1px solid;
-            border-color: #ffffff #404040 #404040 #ffffff;
-            box-shadow: inset -1px -1px 0 #808080;
-            font: bold 11px/14px Tahoma, sans-serif;
+            width: 18px; height: 18px;
+            border: 1px solid var(--term-fg);
+            color: var(--term-fg);
+            font: bold 12px/16px "Courier New", Courier, monospace;
             text-align: center;
             cursor: pointer;
+            user-select: none;
         }
-        .popup-close:active {
-            border-color: #404040 #ffffff #ffffff #404040;
-            box-shadow: inset 1px 1px 0 #808080;
+        .popup-close:hover {
+            background: var(--term-fg);
+            color: var(--term-bg);
         }
         .popup-body { padding: 14px 16px 18px; line-height: 1.5; }
         .popup-body p { margin: 0 0 10px; }
@@ -152,12 +174,13 @@
 </div>
 
 <script>
-    document.getElementById('workLink').addEventListener('click', () => {
-        document.getElementById('workPopup').classList.add('open');
-    });
-    document.getElementById('artLink').addEventListener('click', () => {
-        document.getElementById('artPopup').classList.add('open');
-    });
+    function openPopup(id) {
+        document.querySelectorAll('.popup').forEach(p => {
+            p.classList.toggle('open', p.id === id);
+        });
+    }
+    document.getElementById('workLink').addEventListener('click', () => openPopup('workPopup'));
+    document.getElementById('artLink').addEventListener('click', () => openPopup('artPopup'));
     document.querySelectorAll('.popup-close').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById(btn.dataset.close).classList.remove('open');
@@ -419,6 +442,65 @@ visualPoints.frustumCulled = false;
 visualPoints.renderOrder = 0;
 scene.add(visualPoints);
 
+// --- 5b. CRT POST-PROCESSING (bulbous lens / old TV) ---
+// The scene is rendered into this target, then drawn to the canvas
+// through a barrel-distortion + scanline shader.
+const dpr = renderer.getPixelRatio();
+const sceneTarget = new THREE.WebGLRenderTarget(
+    Math.floor(screenEl.clientWidth * dpr),
+    Math.floor(screenEl.clientHeight * dpr),
+    { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }
+);
+
+const postScene = new THREE.Scene();
+const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+const postMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+        u_tex: { value: sceneTarget.texture }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+        varying vec2 vUv;
+        uniform sampler2D u_tex;
+
+        // Bulge the image outward like a curved CRT tube
+        vec2 curve(vec2 uv) {
+            uv = uv * 2.0 - 1.0;
+            vec2 offset = abs(uv.yx) / vec2(4.0, 3.0);
+            uv = uv + uv * offset * offset;
+            return uv * 0.5 + 0.5;
+        }
+
+        void main() {
+            vec2 uv = curve(vUv);
+
+            // Chromatic aberration: split RGB slightly along x
+            float ca = 0.0015;
+            vec3 col;
+            col.r = texture2D(u_tex, uv + vec2(ca, 0.0)).r;
+            col.g = texture2D(u_tex, uv).g;
+            col.b = texture2D(u_tex, uv - vec2(ca, 0.0)).b;
+
+            // Vignette (darker toward the tube edges)
+            float vig = 16.0 * uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);
+            col *= pow(clamp(vig, 0.0, 1.0), 0.2);
+
+            // Black outside the curved tube, with a soft edge
+            vec2 fade = smoothstep(vec2(0.0), vec2(0.004), uv)
+                      * smoothstep(vec2(1.0), vec2(0.996), uv);
+            col *= fade.x * fade.y;
+
+            gl_FragColor = vec4(col, 1.0);
+        }
+    `,
+    depthTest: false
+});
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMaterial));
+
 // --- 6. ANIMATION LOOP ---
 function animate() {
     requestAnimationFrame(animate);
@@ -457,33 +539,44 @@ function animate() {
     particleVar.material.uniforms.u_field.value = currentEField;
     gpuParticles.compute();
 
-    // --- E. RENDER SCENE TO VIEWPORT ---
-    renderer.setRenderTarget(null); 
+    // --- E. RENDER SCENE INTO OFFSCREEN TARGET ---
     visualMaterial.uniforms.u_stateTex.value = currentState;
 
-    const w = screenEl.clientWidth;
-    const h = screenEl.clientHeight;
-    const topHeight = h * 0.05;    
-    const bottomHeight = h * 0.95; 
+    const tw = sceneTarget.width;
+    const th = sceneTarget.height;
+    const topHeight = Math.floor(th * 0.05);
+    const bottomHeight = th - topHeight;
 
-    renderer.setScissorTest(true);
+    sceneTarget.scissorTest = true;
 
     // Top 5%: Empty
-    renderer.setViewport(0, bottomHeight, w, topHeight);
-    renderer.setScissor(0, bottomHeight, w, topHeight);
+    sceneTarget.viewport.set(0, bottomHeight, tw, topHeight);
+    sceneTarget.scissor.set(0, bottomHeight, tw, topHeight);
+    renderer.setRenderTarget(sceneTarget);
     renderer.setClearColor(0x050505);
     renderer.clear();
 
     // Bottom 95%: Phase Space Simulation Canvas
-    renderer.setViewport(0, 0, w, bottomHeight);
-    renderer.setScissor(0, 0, w, bottomHeight);
+    sceneTarget.viewport.set(0, 0, tw, bottomHeight);
+    sceneTarget.scissor.set(0, 0, tw, bottomHeight);
+    renderer.setRenderTarget(sceneTarget);
     renderer.render(scene, camera);
+
+    sceneTarget.scissorTest = false;
+
+    // --- F. CRT PASS TO CANVAS ---
+    renderer.setRenderTarget(null);
+    renderer.render(postScene, postCamera);
 }
 
 animate();
 
 window.addEventListener('resize', () => {
     renderer.setSize(screenEl.clientWidth, screenEl.clientHeight);
+    sceneTarget.setSize(
+        Math.floor(screenEl.clientWidth * dpr),
+        Math.floor(screenEl.clientHeight * dpr)
+    );
 });
 </script>
 </body>
