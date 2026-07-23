@@ -377,7 +377,7 @@ const histMaterial = new THREE.ShaderMaterial({
             float x = data.r * 2.0 - 1.0;
             float v = data.g * 5.0; // Scaled identically to visual particle coordinates
             gl_Position = vec4(x, v, 0.0, 1.0);
-            gl_PointSize = 0.5;
+            gl_PointSize = 0.6;
         }
     `,
     fragmentShader: `
@@ -445,7 +445,7 @@ const visualMaterial = new THREE.ShaderMaterial({
             float x = data.r * 2.0 - 1.0; 
             float v = data.g * 5.0;       
             gl_Position = vec4(x, v, 0.0, 1.0);
-            gl_PointSize = 3.5;
+            gl_PointSize = 4.5;
         }
     `,
     fragmentShader: `
