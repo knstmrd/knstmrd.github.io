@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Three.js 1D PIC Simulation with Phase-Space Heatmap</title>
+    <title>K / M</title>
     <style>
         :root {
             --term-fg: #33ff33;
@@ -13,6 +13,15 @@
             margin: 0; overflow: hidden; background: var(--term-bg);
             display: flex;
             font-family: "Courier New", Courier, monospace;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: underline;
+        }
+
+        a:visited {
+            color: inherit;
         }
 
         /* --- Terminal frame --- */
@@ -68,7 +77,7 @@
         #menu a {
             color: var(--term-fg);
             font-weight: bold;
-            font-size: 15px;
+            font-size: 18px;
             letter-spacing: 2px;
             text-decoration: none;
             cursor: pointer;
@@ -90,6 +99,9 @@
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: min(480px, 85vw);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
             background: rgba(0, 0, 0, 0.75);
             color: var(--term-fg);
             border: 2px solid var(--term-fg);
@@ -101,13 +113,15 @@
             display: none;
             z-index: 10;
         }
-        .popup.open { display: block; }
+        .popup.open { display: flex; }
         .popup-title {
             display: flex; justify-content: space-between; align-items: center;
             padding: 4px 6px 4px 10px;
             border-bottom: 2px solid var(--term-fg);
             font-weight: bold;
+            font-size: 18px;
             letter-spacing: 2px;
+            flex: none;
         }
         .popup-close {
             width: 18px; height: 18px;
@@ -122,7 +136,7 @@
             background: var(--term-fg);
             color: var(--term-bg);
         }
-        .popup-body { padding: 14px 16px 18px; line-height: 1.5; }
+        .popup-body { padding: 14px 16px 18px; line-height: 1.5; overflow-y: auto; }
         .popup-body p { margin: 0 0 10px; }
     </style>
 </head>
@@ -146,14 +160,11 @@
         <div class="popup-close" data-close="workPopup">x</div>
     </div>
     <div class="popup-body">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-        eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-        minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip
-        ex ea commodo consequat.</p>
-        <p>Duis aute irure dolor in reprehenderit in voluptate velit esse
-        cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-        cupidatat non proident, sunt in culpa qui officia deserunt mollit anim
-        id est laborum.</p>
+        <p>I am a researcher in the field of non-equilibrium gas dynamics and kinetic theory, currently working at RWTH Aachen.</p>
+        <p><a href="https://www.acom.rwth-aachen.de/the-lab/team-people/name:georgii_oblapenko" target="_blank">Personal page on department website</a></p>
+        <p><a href="https://scholar.google.com/citations?user=UMrjBr0AAAAJ&hl=en" target="_blank">Google Scholar profile</a></p>
+        <p><a href="https://www.linkedin.com/in/george-oblapenko/en/" target="_blank">LinkedIn</a></p>
+        <p><a href="https://github.com/knstmrd/CV/blob/master/cv.pdf" target="_blank">CV</a></p>
     </div>
 </div>
 
@@ -163,13 +174,14 @@
         <div class="popup-close" data-close="artPopup">x</div>
     </div>
     <div class="popup-body">
-        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem
-        accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae
-        ab illo inventore veritatis et quasi architecto beatae vitae dicta
-        sunt explicabo.</p>
-        <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit
-        aut fugit, sed quia consequuntur magni dolores eos qui ratione
-        voluptatem sequi nesciunt.</p>
+        <p>I am also active in audio-visual art. Various links to my projects are below (music can also be found on your preferred digital streaming platform):</p>
+        <p><a href="https://kunstmord.bandcamp.com" target="_blank">Kunstmord (experimental post-rock music)</a></p>
+        <p><a href="https://theexoticsphere.bandcamp.com" target="_blank">The Exotic Sphere (experimental electronica and techno)</a></p>
+        <p><a href="https://soundcloud.com/kunstmord" target="_blank">Soundcloud</a></p>
+        <p><a href="https://godacollective.github.io" target="_blank">GODA new media artist collective</a></p>
+        <p><a href="https://youtu.be/U1LWeAK0MCc" target="_blank">Performative pop-science lecture for the "Falling Rhythm" exhibition, Barcelona, 2025</a></p>
+        <p><a href="https://vuggg.bandcamp.com" target="_blank">vug (defunct noise-rock band)</a></p>
+        <p><a href="https://instagram.com/csatsf" target="_blank">Painting, photography</a></p>
     </div>
 </div>
 
@@ -544,7 +556,7 @@ function animate() {
 
     const tw = sceneTarget.width;
     const th = sceneTarget.height;
-    const topHeight = Math.floor(th * 0.05);
+    const topHeight = Math.floor(th * 0.03);
     const bottomHeight = th - topHeight;
 
     sceneTarget.scissorTest = true;
