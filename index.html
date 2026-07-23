@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>K / M</title>
     <style>
         :root {
@@ -29,7 +31,7 @@
            lines (and their glow) can fade out toward the bottom. */
         #terminal {
             flex: 1;
-            margin: 14px;
+            margin: clamp(6px, 3vw, 14px);
             border: 2px solid transparent; /* keeps layout; visuals on ::before */
             position: relative;
             display: flex; flex-direction: column;
@@ -52,8 +54,8 @@
         /* --- Menu bar: horizontal lines with a break for the menu --- */
         #titlebar {
             display: flex; align-items: stretch;
-            height: 26px;
-            padding: 5px 10px;
+            height: clamp(22px, 6vw, 26px);
+            padding: clamp(3px, 1vw, 5px) clamp(6px, 2.5vw, 10px);
             border-bottom: 2px solid var(--term-fg);
             box-shadow:
                 0 6px 10px -6px var(--term-glow),
@@ -68,21 +70,22 @@
                 var(--term-fg) 0px, var(--term-fg) 2px,
                 transparent 2px, transparent 6px
             );
-            background-size: 100% 26px;
+            background-size: 100% clamp(22px, 6vw, 26px);
         }
         #menu {
             display: flex; align-items: center;
-            gap: 28px; padding: 0 22px;
+            gap: clamp(10px, 5vw, 28px); padding: 0 clamp(8px, 4vw, 22px);
         }
         #menu a {
             color: var(--term-fg);
             font-weight: bold;
-            font-size: 18px;
-            letter-spacing: 2px;
+            font-size: clamp(13px, 4vw, 18px);
+            letter-spacing: clamp(0.5px, 0.5vw, 2px);
             text-decoration: none;
             cursor: pointer;
             user-select: none;
             padding: 1px 6px;
+            white-space: nowrap;
         }
         #menu a:hover {
             background: var(--term-fg);
@@ -109,7 +112,7 @@
                 0 0 10px var(--term-glow),
                 inset 0 0 10px var(--term-glow);
             font-family: "Courier New", Courier, monospace;
-            font-size: 16px;
+            font-size: clamp(14px, 3.8vw, 16px);
             display: none;
             z-index: 10;
         }
@@ -119,8 +122,8 @@
             padding: 4px 6px 4px 10px;
             border-bottom: 2px solid var(--term-fg);
             font-weight: bold;
-            font-size: 18px;
-            letter-spacing: 2px;
+            font-size: clamp(15px, 4.2vw, 18px);
+            letter-spacing: clamp(0.5px, 0.5vw, 2px);
             flex: none;
         }
         .popup-close {
@@ -131,12 +134,13 @@
             text-align: center;
             cursor: pointer;
             user-select: none;
+            flex: none;
         }
         .popup-close:hover {
             background: var(--term-fg);
             color: var(--term-bg);
         }
-        .popup-body { padding: 14px 16px 18px; line-height: 1.5; overflow-y: auto; }
+        .popup-body { padding: clamp(10px, 3vw, 14px) clamp(12px, 4vw, 16px) clamp(14px, 4vw, 18px); line-height: 1.5; overflow-y: auto; }
         .popup-body p { margin: 0 0 10px; }
     </style>
 </head>
@@ -215,12 +219,12 @@ import { GPUComputationRenderer } from 'three/addons/misc/GPUComputationRenderer
 
 // --- Simulation Parameters ---
 const NX = 128;             // Cells
-const NPPC = 256;          // Particles Per Cell
+const NPPC = 128;          // Particles Per Cell
 const TOTAL_P = NX * NPPC; // Total Particles
 const TEX_SIZE = Math.ceil(Math.sqrt(TOTAL_P)); // Texture dimensions (80x80)
 
 const DX = 1.0 / NX;
-const ALPHA = 0.975;        // NEW: Hist running average factor (closer to 1.0 = longer memory)
+const ALPHA = 0.98;        // NEW: Hist running average factor (closer to 1.0 = longer memory)
 
 // --- 1. Setup Main Renderer ---
 const screenEl = document.getElementById('screen');
@@ -312,7 +316,7 @@ const particleShader = `
 
 const particleVar = gpuParticles.addVariable("textureParticle", particleShader, dtState);
 gpuParticles.setVariableDependencies(particleVar, [particleVar]);
-particleVar.material.uniforms.u_dt = { value: 0.0075 };
+particleVar.material.uniforms.u_dt = { value: 0.01 };
 particleVar.material.uniforms.u_field = { value: null };
 gpuParticles.init();
 
@@ -419,10 +423,10 @@ const bgMaterial = new THREE.ShaderMaterial({
         varying vec2 vUv;
         uniform sampler2D u_histTex;
         void main() {
-            float val = texture2D(u_histTex, vUv).r * 15.0; // Intensity boost factor
+            float val = texture2D(u_histTex, vUv).r * 17.0; // Intensity boost factor
             // Color map logic: Dark Indigo -> Crimson Crimson -> Bright Gold Heat
             vec3 color = vec3(val * 0.75 + val * val * 0.2, val * 0.75 + val * val * 0.3, val * 0.75  + val * val * 0.1);
-            gl_FragColor = vec4(color, 0.5);
+            gl_FragColor = vec4(color, 0.7);
         }
     `,
     depthTest: false
